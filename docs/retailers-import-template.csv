@@ -1,0 +1,2 @@
+﻿name_ar,name_en,type,governorate,city_ar,city_en,district_ar,district_en,address_ar,address_en,latitude,longitude,phone,opening_hours,notes_ar,notes_en,verified,status
+مثال — احذف هذا الصف,Example — delete this row,SUPERMARKET,بغداد,بغداد,Baghdad,الكرادة,Karrada,شارع ٦٢، قرب ساحة كهرمانة,"62nd St, near Kahramana Sq.",33.3062,44.4234,07XX XXX XXXX,يومياً 8 ص – 11 م,,,false,PENDING

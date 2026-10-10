@@ -1,0 +1,295 @@
+// Bab Al Agha — database schema
+// PostgreSQL + Prisma. Bilingual fields use the Ar/En suffix convention.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN // everything, including users and settings
+  EDITOR // products, categories, content, media
+  SALES // retailers, inquiries, partner applications
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role      @default(EDITOR)
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+  auditLogs    AuditLog[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  /// SHA-256 of the random token stored in the cookie. The raw token is never stored.
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  ipHash    String?
+  userAgent String?
+
+  @@index([userId])
+}
+
+model Category {
+  id            String    @id @default(cuid())
+  slug          String    @unique
+  nameAr        String
+  nameEn        String
+  descriptionAr String?
+  descriptionEn String?
+  imageUrl      String?
+  sortOrder     Int       @default(0)
+  published     Boolean   @default(true)
+  products      Product[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Product {
+  id            String           @id @default(cuid())
+  slug          String           @unique
+  nameAr        String
+  nameEn        String
+  descriptionAr String?
+  descriptionEn String?
+  categoryId    String
+  category      Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  /// Optional verified information. Left empty unless supplied by the company.
+  ingredientsAr String?
+  ingredientsEn String?
+  allergensAr   String?
+  allergensEn   String?
+  storageAr     String?
+  storageEn     String?
+  /// Free-form nutrition rows: [{ labelAr, labelEn, value }]
+  nutrition     Json?
+  featured      Boolean          @default(false)
+  published     Boolean          @default(false)
+  sortOrder     Int              @default(0)
+  images        ProductImage[]
+  variants      ProductVariant[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([categoryId, published])
+  @@index([featured, published])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  altAr     String?
+  altEn     String?
+  sortOrder Int     @default(0)
+
+  @@index([productId])
+}
+
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  labelAr   String
+  labelEn   String?
+  sortOrder Int     @default(0)
+
+  @@index([productId])
+}
+
+enum RetailerStatus {
+  PENDING // submitted, waiting for review
+  ACTIVE // published on the locator
+  INACTIVE // hidden
+  REJECTED
+}
+
+enum RetailerType {
+  SUPERMARKET
+  GROCERY
+  DISTRIBUTOR
+  WHOLESALER
+  BAKERY_OUTLET
+  OTHER
+}
+
+model Retailer {
+  id            String         @id @default(cuid())
+  nameAr        String
+  nameEn        String?
+  type          RetailerType   @default(SUPERMARKET)
+  governorate   String // slug from src/lib/iraq.ts
+  cityAr        String
+  cityEn        String?
+  districtAr    String?
+  districtEn    String?
+  addressAr     String?
+  addressEn     String?
+  latitude      Float?
+  longitude     Float?
+  phone         String?
+  openingHours  String?
+  notesAr       String?
+  notesEn       String?
+  verified      Boolean        @default(false)
+  status        RetailerStatus @default(PENDING)
+  /// Demonstration record created by the seed script. Never real data.
+  isDemo        Boolean        @default(false)
+  /// Submitter contact for public submissions (never published).
+  submittedBy   String?
+  submitterPhone String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status, governorate])
+}
+
+enum InquiryKind {
+  GENERAL
+  PRODUCT
+  RETAILER
+  PARTNERSHIP
+  OTHER
+}
+
+enum InquiryStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  ARCHIVED
+}
+
+model Inquiry {
+  id        String        @id @default(cuid())
+  kind      InquiryKind
+  name      String
+  phone     String
+  email     String?
+  subject   String?
+  message   String
+  locale    String        @default("ar")
+  status    InquiryStatus @default(NEW)
+  notes     InquiryNote[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model PartnerApplication {
+  id               String        @id @default(cuid())
+  businessName     String
+  contactName      String
+  phone            String
+  email            String?
+  governorate      String
+  cityDistrict     String
+  businessType     String
+  location         String
+  businessSize     String?
+  interests        String[]
+  message          String?
+  locale           String        @default("ar")
+  status           InquiryStatus @default(NEW)
+  notes            InquiryNote[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model InquiryNote {
+  id                   String              @id @default(cuid())
+  body                 String
+  authorName           String
+  inquiryId            String?
+  inquiry              Inquiry?            @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  partnerApplicationId String?
+  partnerApplication   PartnerApplication? @relation(fields: [partnerApplicationId], references: [id], onDelete: Cascade)
+  createdAt            DateTime            @default(now())
+}
+
+/// Editable bilingual content blocks (homepage hero, about intro, etc.).
+model ContentBlock {
+  key       String   @id
+  valueAr   String
+  valueEn   String
+  updatedAt DateTime @updatedAt
+}
+
+model TimelineEntry {
+  id        String  @id @default(cuid())
+  year      Int
+  titleAr   String
+  titleEn   String
+  placeAr   String?
+  placeEn   String?
+  imageUrl  String?
+  sortOrder Int     @default(0)
+  published Boolean @default(true)
+}
+
+model GalleryImage {
+  id        String  @id @default(cuid())
+  url       String
+  altAr     String?
+  altEn     String?
+  link      String?
+  sortOrder Int     @default(0)
+  published Boolean @default(true)
+}
+
+/// Key/value settings: contact phones, WhatsApp number, social URLs.
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  url       String
+  key       String   @unique
+  mime      String
+  width     Int?
+  height    Int?
+  size      Int
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String // e.g. retailer.update
+  entity    String
+  entityId  String?
+  /// Before/after snapshot of changed fields.
+  changes   Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+/// Fixed-window rate limiting shared across server instances.
+model RateLimit {
+  key       String   @id
+  count     Int
+  resetAt   DateTime
+}

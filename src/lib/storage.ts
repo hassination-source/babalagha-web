@@ -10,7 +10,9 @@ import sharp, { type Metadata as SharpMetadata } from "sharp";
  *   Suitable for a single server with a persistent disk.
  * - STORAGE_DRIVER=s3: any S3-compatible bucket (AWS S3, Cloudflare R2, DigitalOcean Spaces, MinIO).
  *   Requires S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_PUBLIC_URL.
- *   Uses AWS Signature V4 without the AWS SDK.
+ *   Uses AWS Signature V4 without the AWS SDK, path-style URLs.
+ *   Supabase Storage: S3_ENDPOINT=https://<ref>.supabase.co/storage/v1/s3, S3_REGION=<project region>,
+ *   S3_PUBLIC_URL=https://<ref>.supabase.co/storage/v1/object/public/<bucket>
  *
  * Every image is decoded and re-encoded with sharp. That validates it is a real image,
  * strips EXIF/GPS metadata and caps dimensions.
@@ -78,7 +80,8 @@ async function putS3(key: string, body: Buffer, contentType: string): Promise<st
   const publicUrl = env("S3_PUBLIC_URL").replace(/\/$/, "");
 
   const host = endpoint.host;
-  const canonicalUri = `/${bucket}/${key.split("/").map(encodeURIComponent).join("/")}`;
+  const basePath = endpoint.pathname.replace(/\/+$/, "");
+  const canonicalUri = `${basePath}/${bucket}/${key.split("/").map(encodeURIComponent).join("/")}`;
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
   const dateStamp = amzDate.slice(0, 8);

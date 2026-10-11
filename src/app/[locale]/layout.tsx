@@ -31,6 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     applicationName: ar ? "باب الآغا" : "Bab Al Agha",
     icons: { icon: "/brand/favicon.png", apple: "/brand/apple-touch-icon.png" },
     formatDetection: { telephone: false },
+    ...(process.env.NOINDEX === "true" ? { robots: { index: false, follow: false } } : {}),
     // Existing Google Search Console verification from the old babalagha.com site.
     verification: { google: "NSIby5B-PyequwNm09UIPKfBR1QI8RTl6HQGk8X0k74" },
   };

@@ -15,6 +15,7 @@ services:
     depends_on: [db]
     environment:
       DATABASE_URL: postgresql://babalagha:${POSTGRES_PASSWORD}@db:5432/babalagha
+      DIRECT_URL: postgresql://babalagha:${POSTGRES_PASSWORD}@db:5432/babalagha
       SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
       SITE_URL: ${SITE_URL:-https://www.babalagha.com}
       STORAGE_DRIVER: local

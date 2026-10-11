@@ -34,7 +34,7 @@ export function pageMetadata(opts: {
       images: [{ url: image }],
     },
     twitter: { card: "summary_large_image", title: opts.title, description: opts.description, images: [image] },
-    robots: opts.noindex ? { index: false, follow: true } : undefined,
+    robots: process.env.NOINDEX === "true" ? { index: false, follow: false } : opts.noindex ? { index: false, follow: true } : undefined,
   };
 }
 

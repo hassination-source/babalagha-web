@@ -1,5 +1,62 @@
 # Deployment
 
+## Recommended: GitHub → Vercel + Supabase
+
+### 1. GitHub
+Create an empty **private** repository (e.g. `babalagha-web`), then from the unzipped project:
+```bash
+git init && git add -A && git commit -m "Initial import"
+git branch -M main
+git remote add origin https://github.com/<you>/babalagha-web.git
+git push -u origin main
+```
+
+### 2. Supabase (database + image storage)
+1. New project, region **Frankfurt (eu-central-1)** (closest to Iraq that Vercel also has: `fra1`).
+2. **Database → Connect → ORMs → Prisma** gives two strings:
+   - `DATABASE_URL` = Transaction pooler (port 6543) **with `?pgbouncer=true&connection_limit=1`**
+   - `DIRECT_URL` = Session pooler / direct (port 5432) — used only by migrations
+3. **Storage → New bucket** `media`, **Public**.
+4. **Storage → S3 Connection → New access key** → note Access key ID, Secret, Endpoint, Region.
+
+### 3. Vercel
+Import the GitHub repo (framework Next.js is detected; `vercel.json` sets the build command to
+`prisma migrate deploy && next build` and region `fra1`). Add environment variables:
+
+| Name | Value |
+|---|---|
+| `DATABASE_URL` | Supabase transaction pooler URL (+ `?pgbouncer=true&connection_limit=1`) |
+| `DIRECT_URL` | Supabase session/direct URL |
+| `SESSION_SECRET` | `openssl rand -base64 48` |
+| `SITE_URL` | `https://<project>.vercel.app` now, `https://www.babalagha.com` at launch |
+| `NOINDEX` | `true` until the site replaces babalagha.com (blocks search engines) |
+| `STORAGE_DRIVER` | `s3` |
+| `S3_ENDPOINT` | `https://<ref>.supabase.co/storage/v1/s3` |
+| `S3_REGION` | `eu-central-1` (your project region) |
+| `S3_BUCKET` | `media` |
+| `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | from step 2.4 |
+| `S3_PUBLIC_URL` | `https://<ref>.supabase.co/storage/v1/object/public/media` |
+
+Deploy. The first build creates all tables.
+
+### 4. Seed and first admin (once, from your computer)
+```bash
+npm install
+DATABASE_URL="<DIRECT_URL value>" DIRECT_URL="<DIRECT_URL value>" npm run db:seed
+DATABASE_URL="<DIRECT_URL value>" DIRECT_URL="<DIRECT_URL value>" \
+  ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='long passphrase' ADMIN_NAME='Hassan' npm run admin:create
+```
+Then sign in at `https://<project>.vercel.app/admin` and upload one product image to confirm storage works.
+
+### Notes
+- Vercel **Hobby** is for non-commercial use; a client's production site needs **Pro**.
+- Changing `NEXT_PUBLIC_*` or `S3_PUBLIC_URL` requires a redeploy (they are read at build time).
+- At launch: remove `NOINDEX`, set `SITE_URL`, add the domain in Vercel, untick demo retailers in Admin → المحتوى.
+
+---
+
+## Alternative hosting
+
 The app needs: Node.js 20.9+ (22 LTS recommended), PostgreSQL 14+, persistent storage for uploads (disk or
 S3-compatible bucket), HTTPS.
 

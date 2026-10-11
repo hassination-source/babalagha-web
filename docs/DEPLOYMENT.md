@@ -12,7 +12,7 @@ git push -u origin main
 ```
 
 ### 2. Supabase (database + image storage)
-1. New project, region **Frankfurt (eu-central-1)** (closest to Iraq that Vercel also has: `fra1`).
+1. New project, region **London (eu-west-2)** — keep Vercel functions in the same city (`lhr1` in `vercel.json`).
 2. **Database → Connect → ORMs → Prisma** gives two strings:
    - `DATABASE_URL` = Transaction pooler (port 6543) **with `?pgbouncer=true&connection_limit=1`**
    - `DIRECT_URL` = Session pooler / direct (port 5432) — used only by migrations
@@ -21,7 +21,7 @@ git push -u origin main
 
 ### 3. Vercel
 Import the GitHub repo (framework Next.js is detected; `vercel.json` sets the build command to
-`prisma migrate deploy && next build` and region `fra1`). Add environment variables:
+`prisma migrate deploy && next build` and region `lhr1`). Add environment variables:
 
 | Name | Value |
 |---|---|
@@ -32,7 +32,7 @@ Import the GitHub repo (framework Next.js is detected; `vercel.json` sets the bu
 | `NOINDEX` | `true` until the site replaces babalagha.com (blocks search engines) |
 | `STORAGE_DRIVER` | `s3` |
 | `S3_ENDPOINT` | `https://<ref>.supabase.co/storage/v1/s3` |
-| `S3_REGION` | `eu-central-1` (your project region) |
+| `S3_REGION` | `eu-west-2` (your project region) |
 | `S3_BUCKET` | `media` |
 | `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | from step 2.4 |
 | `S3_PUBLIC_URL` | `https://<ref>.supabase.co/storage/v1/object/public/media` |
